@@ -483,6 +483,34 @@ mod tests {
     }
 
     #[test]
+    fn print_with_no_layout_chosen_keeps_the_dialog_open_and_says_why() {
+        let mut app = app();
+        crate::dialogs::open_print(&mut app);
+        if let Some(d) = app.ui.dialog.as_mut() {
+            d.fields.insert("range".into(), json!("layouts"));
+            d.fields.insert("layouts".into(), json!([]));
+        }
+        // Refused before anything is printed.
+        assert!(crate::dialogs::confirm(&mut app).is_err());
+        let d = app.ui.dialog.as_ref().unwrap();
+        assert_eq!((d.id.as_str(), d.s("status").as_str()), ("print", "Choose at least one layout."));
+    }
+
+    #[test]
+    fn clicking_a_layout_header_leaves_edit_parents() {
+        let mut app = app();
+        app.ui.dock_tab = "pages".into();
+        app.run("layout.parents.edit", json!({"on": true})).unwrap();
+        let mut h = crate::test_window::open(app, egui::vec2(1400.0, 1000.0));
+        h.run_steps(3);
+        h.get_by_label("Tablet H").click();
+        h.run_steps(4);
+        let app = &h.state().app;
+        assert!(!app.session.active().unwrap().editing_parents);
+        assert_eq!(crate::canvas::current_page(app), Some(2));
+    }
+
+    #[test]
     fn no_layout_chosen_keeps_the_dialog_open() {
         let mut app = app();
         open(&mut app, None);

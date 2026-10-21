@@ -14,8 +14,9 @@ const ID: &str = "file.exportBatch";
 const MAX_FILES: usize = 5_000;
 /// The most versions in a job.
 const MAX_VERSIONS: usize = 24;
-/// The most pixels in one exported image.
-const MAX_PIXELS: f64 = 4.0e8;
+/// The most pixels in one exported image (the limit EPUB page images have: an RGBA buffer of
+/// about 320 MB before encoding).
+const MAX_PIXELS: f64 = 8.0e7;
 /// The most characters in a file or folder name.
 const MAX_NAME: usize = 120;
 /// The most saved export presets, and the longest preset name.
@@ -575,7 +576,10 @@ mod tests {
         ] {
             assert!(s.execute(ID, &p).is_err(), "{p}");
         }
-        // A huge resolution is capped, not a crash.
+        // A huge resolution is capped, not a crash; past 80 million pixels an image is refused.
+        let mut tall = Session::new();
+        tall.execute("file.new", &json!({"pages": 1, "width": 3000, "height": 3000})).unwrap();
+        assert!(tall.execute(ID, &json!({"job": {"versions": [{"format": "png", "ppi": 300}]}})).is_err(), "12500² pixels");
         let r = s.execute(ID, &json!({"job": {"versions": [{"format": "png", "ppi": 1e12}], "layouts": ["Print"]}, "dryRun": true})).unwrap();
         assert_eq!(r["files"].as_array().unwrap().len(), 2);
         let mut big = Session::new();

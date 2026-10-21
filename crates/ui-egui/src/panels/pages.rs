@@ -783,6 +783,13 @@ fn layout_header(
     if resp.double_clicked() {
         open_layout_options(app, doc, layouts, k);
     } else if resp.clicked() {
+        // As a page click: leave Edit Parents first, so the view moves on document pages.
+        if app.session.active().is_some_and(|st| st.editing_parents) {
+            let _ = app.run("layout.parents.edit", json!({"on": false}));
+            if let Some(v) = app.view_mut() {
+                v.fitted = false;
+            }
+        }
         crate::canvas::go_to_page(app, l.start);
     }
     resp.context_menu(|ui| layout_menu(app, ui, doc, layouts, k));

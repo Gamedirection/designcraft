@@ -418,6 +418,9 @@ fn print_dialog(app: &crate::DesignApp, ui: &mut egui::Ui, d: &mut Dialog) {
         });
         ui.end_row();
     });
+    if let Some(st) = d.fields.get("status").and_then(Value::as_str) {
+        crate::rtl::label(ui, egui::RichText::new(st).color(ui.visuals().error_fg_color));
+    }
 }
 
 /// The presets offered by the Export PDF dialog, in display order. The stored value is the
@@ -3353,7 +3356,12 @@ pub fn confirm(app: &mut DesignApp) -> Result<Value, String> {
             if d.s("range") == "layouts" {
                 let chosen = d.fields.get("layouts").cloned().unwrap_or_else(|| json!([]));
                 if chosen.as_array().is_some_and(Vec::is_empty) {
-                    return Err(crate::i18n::tr(&app.ui.language, "Choose at least one layout.").to_string());
+                    // Keep the dialog open, saying why.
+                    let e = crate::i18n::tr(&app.ui.language, "Choose at least one layout.").to_string();
+                    let mut d = d.clone();
+                    d.fields.insert("status".into(), json!(e));
+                    app.ui.dialog = Some(d);
+                    return Err(e);
                 }
                 params["layouts"] = chosen;
                 params["separateJobs"] = json!(d.b("separateJobs"));
